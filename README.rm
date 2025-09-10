@@ -1,0 +1,143 @@
+# 项目说明（test_sqlitebrowser）
+
+基于 CMake + Conan 的 C++ 桌面项目骨架，目标模块为 `sqlitebrowser`。当前仓库主要用于演示/搭建构建链路，依赖 `OpenSSL` 与 `SQLite3`，并通过 `CMakePresets.json` 提供了常见的构建预设（Ninja 与 Visual Studio）。
+
+
+## 目录结构
+
+- `CMakeLists.txt`: 顶层 CMake 配置，包含 `cmake_tools/entry/desktop-cpp.cmake` 并添加子目录 `sqlitebrowser`
+- `CMakePresets.json`: CMake 预设（Debug/Release、Ninja、VS2022）
+- `conanfile.py`: 声明依赖（`openssl/1.1.1w`、`sqlite3/3.43.0`）并生成 CMake 工具链/依赖文件
+- `cmake_tools/`: 期望存放通用 CMake 工具脚本（例如 `entry/desktop-cpp.cmake`）
+- `sqlitebrowser/`: 业务/应用源码目录（当前为空，等待添加 `CMakeLists.txt` 与源码）
+
+
+## 环境要求
+
+- CMake >= 3.16
+- Conan 2.x（已使用 `from conan import ConanFile` API）
+- C/C++ 工具链（GCC/Clang 或 MSVC）
+- Ninja（可选，用于 Ninja 预设）
+- Git（如需拉取子模块）
+
+
+## 获取依赖（Conan）
+
+首次在本机使用 Conan 时，建议先生成 profile：
+
+```bash
+conan profile detect
+```
+
+随后为不同构建类型安装依赖（会在指定输出目录生成 CMake 工具链与依赖文件）：
+
+```bash
+# Debug
+conan install . -s build_type=Debug -of out/ninja-debug/build --build=missing
+
+# Release
+conan install . -s build_type=Release -of out/ninja-release/build --build=missing
+```
+
+说明：仓库中的 `CMakeLists.txt` 调用了 `__install_conan_requirements(...)` 宏，但该宏来自 `cmake_tools/entry/desktop-cpp.cmake`。如果该脚本不存在，CMake 配置阶段将无法自动安装依赖，因此推荐先显式执行上面的 `conan install` 步骤。
+
+
+## 配置与构建（使用 CMake 预设）
+
+```bash
+# 配置（Debug，Ninja）
+cmake --preset ninja-debug
+
+# 构建（Debug，Ninja）
+cmake --build --preset ninja-debug
+
+# 配置（Release，Ninja）
+cmake --preset ninja-release
+
+# 构建（Release，Ninja）
+cmake --build --preset ninja-release
+```
+
+生成产物默认位于 `out/<preset>/build/` 目录下（例如 `out/ninja-debug/build/`）。
+
+
+## 手动配置（不使用预设，可选）
+
+```bash
+# Debug（Ninja）
+cmake -S . -B out/debug -G Ninja -DCMAKE_BUILD_TYPE=Debug
+cmake --build out/debug
+
+# Release（Ninja）
+cmake -S . -B out/release -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build out/release
+```
+
+
+## 添加源码（从空目录开始）
+
+当前 `sqlitebrowser/` 为空，建议最小化接入：
+
+1) 在 `sqlitebrowser/` 中新增 `CMakeLists.txt`：
+
+```cmake
+cmake_minimum_required(VERSION 3.16)
+project(sqlitebrowser_app)
+
+add_executable(sqlitebrowser_app
+    main.cpp
+)
+
+# 链接第三方库（Conan 生成的 find 包）
+find_package(OpenSSL REQUIRED)
+find_package(sqlite3 REQUIRED)
+target_link_libraries(sqlitebrowser_app PRIVATE OpenSSL::SSL OpenSSL::Crypto sqlite3::sqlite3)
+```
+
+2) 在同目录新增 `main.cpp`：
+
+```cpp
+#include <iostream>
+
+int main() {
+    std::cout << "Hello sqlitebrowser!" << std::endl;
+    return 0;
+}
+```
+
+完成上述添加后，重复“获取依赖 + 配置与构建”。可执行文件将输出到对应的构建目录。
+
+
+## 关于 `cmake_tools` 目录
+
+顶层 `CMakeLists.txt` 包含：
+
+```cmake
+include(cmake_tools/entry/desktop-cpp.cmake)
+__install_conan_requirements(MSVC_RUNTIME "dynamic")
+```
+
+如果你在配置时遇到如下错误：
+
+- “include could not find load file: cmake_tools/entry/desktop-cpp.cmake”
+
+请按以下方式处理其一：
+
+- 如果这是你项目中的 Git 子模块，请执行：
+  ```bash
+  git submodule update --init --recursive
+  ```
+- 若无子模块，请将你自有的 `cmake_tools/entry/desktop-cpp.cmake` 放入该路径；或临时注释 `include(...)` 与 `__install_conan_requirements(...)` 两行，并改为手动执行上文“获取依赖（Conan）”。
+
+
+## 常见问题
+
+- 找不到 `OpenSSL` 或 `sqlite3`：请先运行 `conan install`，并确保 `-of` 指向与你的构建目录一致的路径。
+- 预设不可用：确认 CMake 版本 >= 3.23（较新版本更完整支持 `CMakePresets.json`）。本仓库设置的最小版本为 3.16，但推荐更新 CMake 以获得更好预设体验。
+- Ninja 未安装：更换为 Visual Studio 预设（Windows）或安装 Ninja，再使用 Ninja 预设。
+
+
+## 许可
+
+根据你项目需要自行添加（例如 `MIT`、`Apache-2.0` 等）。
+
