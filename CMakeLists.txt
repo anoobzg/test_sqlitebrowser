@@ -5,5 +5,6 @@ project(test_sqlitebrowser)
 include(cmake_tools/entry/desktop-cpp.cmake)
 __install_conan_requirements(MSVC_RUNTIME "dynamic")
 
+add_subdirectory(SQLiteCpp)
 add_subdirectory(sqlitebrowser)
 

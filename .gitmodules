@@ -4,3 +4,6 @@
 [submodule "sqlitebrowser"]
 	path = sqlitebrowser
 	url = https://github.com/anoobzg/sqlitebrowser.git
+[submodule "SQLiteCpp"]
+	path = SQLiteCpp
+	url = https://github.com/anoobzg/SQLiteCpp.git
